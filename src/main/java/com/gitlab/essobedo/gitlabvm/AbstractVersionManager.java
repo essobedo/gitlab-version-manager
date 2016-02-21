@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  * @version $Id$
  * @since 1.0
  */
-public abstract class AbstractVersionManager implements VersionManager {
+public abstract class AbstractVersionManager<T extends Manageable> implements VersionManager<T> {
     /**
      * The logger of the class.
      */
@@ -57,21 +57,21 @@ public abstract class AbstractVersionManager implements VersionManager {
         this.endpoint = endpoint;
     }
 
-    private Repository getRepository(final Manageable manageable) throws ApplicationException {
+    private Repository getRepository(final T application) throws ApplicationException {
         if (repository == null) {
             synchronized (this) {
                 if (repository == null) {
-                    this.repository = new Repository(endpoint, createConfiguration(manageable));
+                    this.repository = new Repository(endpoint, createConfiguration(application));
                 }
             }
         }
         return repository;
     }
 
-    protected abstract ConnectionConfiguration createConfiguration(Manageable manageable) throws ApplicationException;
+    protected abstract ConnectionConfiguration createConfiguration(T application) throws ApplicationException;
 
     @Override
-    public Task<String> check(final Manageable manageable) throws ApplicationException {
+    public Task<String> check(final T application) throws ApplicationException {
         return new Task<String>(Localization.getMessage("check")) {
             @Override
             public boolean cancelable() {
@@ -80,7 +80,7 @@ public abstract class AbstractVersionManager implements VersionManager {
 
             @Override
             public String execute() throws ApplicationException, TaskInterruptedException {
-                final Repository repository = getRepository(manageable);
+                final Repository repository = getRepository(application);
                 updateMessage(Localization.getMessage("checking"));
                 updateProgress(0, 1);
                 final SortedSet<String> versions = repository.getVersions();
@@ -89,7 +89,7 @@ public abstract class AbstractVersionManager implements VersionManager {
                 }
                 final String last = versions.last();
                 updateProgress(1, 1);
-                if (!manageable.version().equals(last)) {
+                if (!application.version().equals(last)) {
                     return last;
                 }
                 return null;
@@ -98,7 +98,7 @@ public abstract class AbstractVersionManager implements VersionManager {
     }
 
     @Override
-    public Task<Void> store(final Manageable manageable, final OutputStream outputStream) throws ApplicationException {
+    public Task<Void> store(final T application, final OutputStream outputStream) throws ApplicationException {
         return new Task<Void>(Localization.getMessage("store")) {
             @Override
             public boolean cancelable() {
@@ -107,7 +107,7 @@ public abstract class AbstractVersionManager implements VersionManager {
 
             @Override
             public Void execute() throws ApplicationException, TaskInterruptedException {
-                final Repository repository = getRepository(manageable);
+                final Repository repository = getRepository(application);
                 updateMessage(Localization.getMessage("finding"));
                 updateProgress(0, 1);
                 final SortedSet<String> versions = repository.getVersions();
