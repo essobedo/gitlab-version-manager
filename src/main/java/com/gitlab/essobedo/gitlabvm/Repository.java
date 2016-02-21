@@ -21,12 +21,8 @@ package com.gitlab.essobedo.gitlabvm;
 import com.gitlab.essobedo.appma.exception.ApplicationException;
 import com.goebl.david.Response;
 import com.goebl.david.Webb;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Comparator;
 import java.util.SortedSet;
@@ -126,32 +122,27 @@ final class Repository {
 
     InputStream getPatch(final String version) throws ApplicationException {
         final String token = findToken();
-        final URL url;
+        final Response<InputStream> response;
         try {
-            url = new URL(String.format("%s/%s/%s/raw/%s/%s/%s?private_token=%s",
-                webb.getBaseUri(),
-                URLEncoder.encode(configuration.projectOwner(), Repository.ENCODING),
-                URLEncoder.encode(configuration.projectName(), Repository.ENCODING),
-                URLEncoder.encode(configuration.branch(), Repository.ENCODING),
-                URLEncoder.encode(version, Repository.ENCODING),
-                URLEncoder.encode(configuration.patchFileName(), Repository.ENCODING),
-                URLEncoder.encode(token, Repository.ENCODING)));
-        } catch (UnsupportedEncodingException | MalformedURLException e) {
+            response = webb
+                .get(String.format("/%s/%s/raw/%s/%s/%s",
+                    URLEncoder.encode(configuration.projectOwner(), Repository.ENCODING),
+                    URLEncoder.encode(configuration.projectName(), Repository.ENCODING),
+                    URLEncoder.encode(configuration.branch(), Repository.ENCODING),
+                    URLEncoder.encode(version, Repository.ENCODING),
+                    URLEncoder.encode(configuration.patchFileName(), Repository.ENCODING)))
+                .param("private_token", token)
+                .followRedirects(false)
+                .asStream();
+        } catch (UnsupportedEncodingException e) {
             throw new ApplicationException(String.format("Could not access to the file '%s",
                 configuration.patchFileName()), e);
         }
-        try {
-            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setInstanceFollowRedirects(false);
-            if (connection.getResponseCode() != 200) {
-                throw new ApplicationException(String.format(
-                    "Could not access to the file '%s due to the error: %s",
-                    configuration.patchFileName(), connection.getResponseMessage()));
-            }
-            return connection.getInputStream();
-        } catch (IOException e) {
-            throw new ApplicationException(String.format("Could not read to the file '%s",
-                configuration.patchFileName()), e);
+        if (response.getStatusCode() != 200) {
+            throw new ApplicationException(String.format(
+                "Could not access to the file '%s due to the error: %s",
+                configuration.patchFileName(), response.getResponseMessage()));
         }
+        return response.getBody();
     }
 }
