@@ -148,6 +148,8 @@ public class TestAbstractVersionManager {
         properties.put("login", "esso/bedo");
         this.versionManager = new VersionManager(properties);
         assertNull(versionManager.check(application).execute());
+        when(application.version()).thenReturn("1.0.5-SNAPSHOT");
+        assertNull(versionManager.check(application).execute());
         properties.put("login", "esso/bedo2");
         assertNull(versionManager.check(application).execute());
         this.versionManager = new VersionManager(properties);

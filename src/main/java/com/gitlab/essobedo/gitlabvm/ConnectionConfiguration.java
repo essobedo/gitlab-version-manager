@@ -29,7 +29,16 @@ public interface ConnectionConfiguration {
     String branch();
     String password();
     String login();
-    Comparator<String> versionComparator();
+    default Comparator<String> versionComparator() {
+        return (s1, s2) -> {
+            if (s1.startsWith(s2) && s1.endsWith("-SNAPSHOT")) {
+                return -1;
+            } else if (s2.startsWith(s1) && s2.endsWith("-SNAPSHOT")) {
+                return 1;
+            }
+            return s1.compareTo(s2);
+        };
+    }
     String projectId();
     String patchFileName();
     String projectName();

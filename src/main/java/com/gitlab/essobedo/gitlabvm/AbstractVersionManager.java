@@ -89,7 +89,7 @@ public abstract class AbstractVersionManager<T extends Manageable> implements Ve
                 }
                 final String last = versions.last();
                 updateProgress(1, 1);
-                if (!application.version().equals(last)) {
+                if (repository.versionComparator().compare(application.version(), last) < 0) {
                     return last;
                 }
                 return null;

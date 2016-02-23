@@ -56,6 +56,10 @@ final class Repository {
         webb.setBaseUri(endpoint);
     }
 
+    Comparator<String> versionComparator() {
+        return this.configuration.versionComparator();
+    }
+
     private boolean hasToken() {
         return token != null;
     }
