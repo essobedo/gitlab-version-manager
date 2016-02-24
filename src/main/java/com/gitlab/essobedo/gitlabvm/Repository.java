@@ -21,6 +21,7 @@ package com.gitlab.essobedo.gitlabvm;
 import com.gitlab.essobedo.appma.exception.ApplicationException;
 import com.goebl.david.Response;
 import com.goebl.david.Webb;
+import com.goebl.david.WebbException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -76,7 +77,7 @@ final class Repository {
                      URLEncoder.encode(configuration.login(), Repository.ENCODING),
                      URLEncoder.encode(configuration.password(), Repository.ENCODING)))
                  .asJsonObject();
-        } catch (UnsupportedEncodingException e) {
+        } catch (UnsupportedEncodingException | WebbException e) {
             throw new ApplicationException("Could not get the private token", e);
         }
 
@@ -98,11 +99,17 @@ final class Repository {
 
     SortedSet<String> getVersions() throws ApplicationException {
         final String token = findToken();
-        final Response<JSONArray> response = webb
-            .get(String.format("/api/v3/projects/%s/repository/tree", configuration.projectId()))
-            .param("private_token", token)
-            .param("ref_name", configuration.branch())
-            .asJsonArray();
+        final Response<JSONArray> response;
+        try {
+            response = webb
+                .get(String.format("/api/v3/projects/%s/repository/tree", configuration.projectId()))
+                .param("private_token", token)
+                .param("ref_name", configuration.branch())
+                .asJsonArray();
+        } catch (WebbException e) {
+            throw new ApplicationException(String.format("Could not access to the versions of the project '%s",
+                configuration.projectId()), e);
+        }
         if (response.getStatusCode() >= 400) {
             throw new ApplicationException(String.format(
                 "Could not find the versions of the project '%s' in the branch '%s' due to the error: %s",
@@ -138,7 +145,7 @@ final class Repository {
                 .param("private_token", token)
                 .followRedirects(false)
                 .asStream();
-        } catch (UnsupportedEncodingException e) {
+        } catch (UnsupportedEncodingException | WebbException e) {
             throw new ApplicationException(String.format("Could not access to the file '%s",
                 configuration.patchFileName()), e);
         }

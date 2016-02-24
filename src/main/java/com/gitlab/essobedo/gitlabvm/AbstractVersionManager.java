@@ -44,7 +44,7 @@ public abstract class AbstractVersionManager<T extends Manageable> implements Ve
     /**
      * The default file size in case there is no way to get the size of the file to download.
      */
-    private static final int DEFAULT_FILE_SIZE = 1024;
+    private static final int DEFAULT_FILE_SIZE = 4096;
 
     private volatile Repository repository;
     private final String endpoint;
@@ -82,13 +82,11 @@ public abstract class AbstractVersionManager<T extends Manageable> implements Ve
             public String execute() throws ApplicationException, TaskInterruptedException {
                 final Repository repository = getRepository(application);
                 updateMessage(Localization.getMessage("checking"));
-                updateProgress(0, 1);
                 final SortedSet<String> versions = repository.getVersions();
                 if (isCanceled()) {
                     throw new TaskInterruptedException();
                 }
                 final String last = versions.last();
-                updateProgress(1, 1);
                 if (repository.versionComparator().compare(application.version(), last) < 0) {
                     return last;
                 }
@@ -133,7 +131,7 @@ public abstract class AbstractVersionManager<T extends Manageable> implements Ve
                         unknownSize = true;
                         updateProgress(0, DEFAULT_FILE_SIZE);
                     }
-                    final byte[] buffer = new byte[1024];
+                    final byte[] buffer = new byte[4096];
                     int length;
                     int downloaded = 0;
                     while ((length = inputStream.read(buffer)) != -1) {
@@ -145,6 +143,7 @@ public abstract class AbstractVersionManager<T extends Manageable> implements Ve
                             downloaded += length;
                             updateProgress(downloaded, size);
                         }
+                        updateMessage(Localization.getMessage("downloaded", downloaded / 1024));
                         if (isCanceled()) {
                             throw new TaskInterruptedException();
                         }
