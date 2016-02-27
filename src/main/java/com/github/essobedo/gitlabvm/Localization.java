@@ -30,7 +30,7 @@ final class Localization {
      * A singleton containing all the messages of the application.
      */
     private static final com.github.essobedo.appma.i18n.Localization INSTANCE = new
-        com.github.essobedo.appma.i18n.Localization("gitlabvm.i18n.messages");
+        com.github.essobedo.appma.i18n.Localization("gitlabvm.i18n.messages", Localization.class.getClassLoader());
 
     /**
      * Default constructor.
