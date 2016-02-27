@@ -16,12 +16,12 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.gitlab.essobedo.gitlabvm;
+package com.github.essobedo.gitlabvm;
 
-import com.gitlab.essobedo.appma.core.Configuration;
-import com.gitlab.essobedo.appma.exception.ApplicationException;
-import com.gitlab.essobedo.appma.spi.Manageable;
-import com.gitlab.essobedo.appma.task.Task;
+import com.github.essobedo.appma.core.Configuration;
+import com.github.essobedo.appma.exception.ApplicationException;
+import com.github.essobedo.appma.spi.Manageable;
+import com.github.essobedo.appma.task.Task;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -42,11 +42,11 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
-import org.junit.Before;
-import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +68,7 @@ public class TestAbstractVersionManager {
     public void init() throws Exception {
         // create a resource config that scans for JAX-RS resources and providers
         // in com.example package
-        final ResourceConfig rc = new ResourceConfig().packages("com.gitlab.essobedo.gitlabvm");
+        final ResourceConfig rc = new ResourceConfig().packages("com.github.essobedo.gitlabvm");
         server = GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
         server.start();
         this.properties = new Properties();

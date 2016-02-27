@@ -16,9 +16,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.gitlab.essobedo.gitlabvm;
+package com.github.essobedo.gitlabvm;
 
-import com.gitlab.essobedo.appma.exception.ApplicationException;
+import com.github.essobedo.appma.exception.ApplicationException;
 import com.goebl.david.Response;
 import com.goebl.david.Webb;
 import com.goebl.david.WebbException;
@@ -33,23 +33,49 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
+ * The class allowing to access to gitlab using the Gitlab API.
+ *
  * @author Nicolas Filotto (nicolas.filotto@gmail.com)
  * @version $Id$
  * @since 1.0
  */
 final class Repository {
 
+    /**
+     * The HTTP code in case of an OK.
+     */
+    private static final int OK_CODE = 200;
+    /**
+     * The min value of the HTTP codes from which we consider the response as a success.
+     */
+    private static final int MIN_SUCCESS_CODE = 400;
+    /**
+     * The encoding used to URL encode the parameters.
+     */
     private static final String ENCODING = "UTF-8";
-
+    /**
+     * The private token.
+     */
     private String token;
-
+    /**
+     * The {@link Webb} instance allowing to access to gitlab thanks to the http/https protocol.
+     */
     private final Webb webb;
+    /**
+     * The configuration to use to access to gitlab.
+     */
     private final ConnectionConfiguration configuration;
 
+    /**
+     * Constructs a {@code Repository} with the specified end point and configuration.
+     * @param endpoint The end point of the gitlab repository to access.
+     * @param configuration the configuration to use to access to gitlab.
+     * @throws ApplicationException in case the configuration is not valid.
+     */
     Repository(final String endpoint, final ConnectionConfiguration configuration)
         throws ApplicationException {
-        if (configuration.login() == null || configuration.login().isEmpty() ||
-            configuration.password() == null || configuration.password().isEmpty()) {
+        if (configuration.login() == null || configuration.login().isEmpty()
+            || configuration.password() == null || configuration.password().isEmpty()) {
             throw new ApplicationException("The login and/or password cannot be empty");
         }
         this.configuration = configuration;
@@ -57,14 +83,27 @@ final class Repository {
         webb.setBaseUri(endpoint);
     }
 
+    /**
+     * Gives the comparator of version ids to use to be able to identify the latest version.
+     * @return the comparator of version ids.
+     */
     Comparator<String> versionComparator() {
         return this.configuration.versionComparator();
     }
 
+    /**
+     * Checks if the private token has already been retrieved.
+     * @return {@code true} if the private token has already been retrieved, {@code false} otherwise.
+     */
     private boolean hasToken() {
         return token != null;
     }
 
+    /**
+     * Retrieves the private token to use to acces to the gitlab repository.
+     * @return the private token to use to acces to the gitlab repository.
+     * @throws ApplicationException if the private token could not be retrieved.
+     */
     private String findToken() throws ApplicationException {
         if (hasToken()) {
             return token;
@@ -83,7 +122,7 @@ final class Repository {
 
         final JSONObject body = response.getBody();
         try {
-            if (response.getStatusCode() >= 400) {
+            if (response.getStatusCode() >= MIN_SUCCESS_CODE) {
                 throw new ApplicationException(String.format("Could not connect to the server due to the error: %s",
                     response.getResponseMessage()));
             }
@@ -97,6 +136,11 @@ final class Repository {
         return token;
     }
 
+    /**
+     * Gives the list of versions available in the repository ordered using version ids comparator.
+     * @return the of versions available.
+     * @throws ApplicationException if the list of versions could not be retrieved.
+     */
     SortedSet<String> getVersions() throws ApplicationException {
         final String token = findToken();
         final Response<JSONArray> response;
@@ -110,7 +154,7 @@ final class Repository {
             throw new ApplicationException(String.format("Could not access to the versions of the project '%s",
                 configuration.projectId()), e);
         }
-        if (response.getStatusCode() >= 400) {
+        if (response.getStatusCode() >= MIN_SUCCESS_CODE) {
             throw new ApplicationException(String.format(
                 "Could not find the versions of the project '%s' in the branch '%s' due to the error: %s",
                 configuration.projectId(),
@@ -131,6 +175,12 @@ final class Repository {
         return result;
     }
 
+    /**
+     * Gets the content of the patch for the specified version id.
+     * @param version the version id for which we want the content of the patch.
+     * @return the content of the patch.
+     * @throws ApplicationException if the content of the patch could not be found.
+     */
     InputStream getPatch(final String version) throws ApplicationException {
         final String token = findToken();
         final Response<InputStream> response;
@@ -149,7 +199,7 @@ final class Repository {
             throw new ApplicationException(String.format("Could not access to the file '%s",
                 configuration.patchFileName()), e);
         }
-        if (response.getStatusCode() != 200) {
+        if (response.getStatusCode() != OK_CODE) {
             throw new ApplicationException(String.format(
                 "Could not access to the file '%s due to the error: %s",
                 configuration.patchFileName(), response.getResponseMessage()));

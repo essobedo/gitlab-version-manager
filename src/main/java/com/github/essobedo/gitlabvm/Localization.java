@@ -16,12 +16,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.gitlab.essobedo.gitlabvm;
-
-import java.util.MissingResourceException;
-import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+package com.github.essobedo.gitlabvm;
 
 /**
  * The class that manages the internationalization of the message to show to the end-users.
@@ -30,26 +25,12 @@ import java.util.logging.Logger;
  * @version $Id$
  */
 final class Localization {
-    /**
-     * The logger of the class.
-     */
-    private static final Logger LOG = Logger.getLogger(Localization.class.getName());
 
     /**
-     * The {@code ResourceBundle} containing all the messages of the application.
+     * A singleton containing all the messages of the application.
      */
-    private static final ResourceBundle RESOURCE_BUNDLE;
-
-    static {
-        try {
-            RESOURCE_BUNDLE = ResourceBundle.getBundle("gitlabvm.i18n.messages");
-        } catch (RuntimeException e) {
-            if (LOG.isLoggable(Level.SEVERE)) {
-                LOG.log(Level.SEVERE, "Could not access to the resource bundle", e);
-            }
-            throw e;
-        }
-    }
+    private static final com.github.essobedo.appma.i18n.Localization INSTANCE = new
+        com.github.essobedo.appma.i18n.Localization("gitlabvm.i18n.messages");
 
     /**
      * Default constructor.
@@ -65,14 +46,6 @@ final class Localization {
      * @return The message internationalized.
      */
     public static String getMessage(final String key, final Object... params) {
-        try {
-            final String message = RESOURCE_BUNDLE.getString(key);
-            return String.format(message, params);
-        } catch (MissingResourceException e) {
-            if (LOG.isLoggable(Level.SEVERE)) {
-                LOG.log(Level.SEVERE, "Could not find the message corresponding to the key " + key);
-            }
-        }
-        return key;
+        return INSTANCE.getLocalizedMessage(key, params);
     }
 }
