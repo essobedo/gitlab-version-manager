@@ -78,6 +78,13 @@ public class TestConnectionConfiguration {
         assertTrue(config.versionComparator().compare("1.0.4", "1.0.5-SNAPSHOT") < 0);
         assertTrue(config.versionComparator().compare("1.0.5-SNAPSHOT", "1.0.6-SNAPSHOT") < 0);
         assertTrue(config.versionComparator().compare("1.0.5-SNAPSHOT", "1.0.5") < 0);
+        assertTrue(config.versionComparator().compare("1.0.9", "1.0.10") < 0);
+        assertTrue(config.versionComparator().compare("1.0.9", "1.0.10-SNAPSHOT") < 0);
+        assertTrue(config.versionComparator().compare("1.9.9", "1.10.9") < 0);
+        assertTrue(config.versionComparator().compare("1.0.5-SNAPSHOT", "1.0.5.1-SNAPSHOT") < 0);
+        assertTrue(config.versionComparator().compare("1.0.5-SNAPSHOT", "1.0.5.1") < 0);
+        assertTrue(config.versionComparator().compare("1.0-SNAPSHOT", "1.0.1") < 0);
+        assertTrue(config.versionComparator().compare("1.0-SNAPSHOT", "1.0.1-SNAPSHOT") < 0);
 
         assertTrue(config.versionComparator().compare("1.0.1", "1.0") > 0);
         assertTrue(config.versionComparator().compare("1.0.2", "1.0") > 0);
@@ -88,5 +95,12 @@ public class TestConnectionConfiguration {
         assertTrue(config.versionComparator().compare("1.0.5-SNAPSHOT", "1.0.4") > 0);
         assertTrue(config.versionComparator().compare("1.0.6-SNAPSHOT", "1.0.5-SNAPSHOT") > 0);
         assertTrue(config.versionComparator().compare("1.0.5", "1.0.5-SNAPSHOT") > 0);
+        assertTrue(config.versionComparator().compare("1.0.10", "1.0.9") > 0);
+        assertTrue(config.versionComparator().compare("1.0.10-SNAPSHOT", "1.0.9") > 0);
+        assertTrue(config.versionComparator().compare("1.10.9", "1.9.9") > 0);
+        assertTrue(config.versionComparator().compare("1.0.5.1-SNAPSHOT", "1.0.5-SNAPSHOT") > 0);
+        assertTrue(config.versionComparator().compare("1.0.5.1", "1.0.5-SNAPSHOT") > 0);
+        assertTrue(config.versionComparator().compare("1.0.1", "1.0-SNAPSHOT") > 0);
+        assertTrue(config.versionComparator().compare("1.0.1-SNAPSHOT", "1.0-SNAPSHOT") > 0);
     }
 }

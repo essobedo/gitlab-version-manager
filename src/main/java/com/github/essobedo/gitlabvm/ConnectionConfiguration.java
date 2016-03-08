@@ -67,14 +67,41 @@ public interface ConnectionConfiguration {
      * Gives the comparator of version ids to use to be able to identify the latest version.
      * @return the comparator of version ids.
      */
+    @SuppressWarnings("PMD.NPathComplexity")
     default Comparator<String> versionComparator() {
         return (version1, version2) -> {
-            if (version1.startsWith(version2) && version1.endsWith("-SNAPSHOT")) {
-                return -1;
-            } else if (version2.startsWith(version1) && version2.endsWith("-SNAPSHOT")) {
-                return 1;
+            final String[] versions1 = version1.split("\\.");
+            final String[] versions2 = version2.split("\\.");
+            final String defaultValue = "*";
+            final String snapshot = "-SNAPSHOT";
+            int result = 0;
+            for (int i = 0, length = Math.max(versions1.length, versions2.length); result == 0 && i < length; i++) {
+                String vElement1 = i < versions1.length ? versions1[i] : defaultValue;
+                String vElement2 = i < versions2.length ? versions2[i] : defaultValue;
+                final boolean snapshot1 = vElement1.endsWith(snapshot);
+                if (snapshot1) {
+                    vElement1 = vElement1.substring(0, vElement1.length() - snapshot.length() + 1);
+                } else {
+                    vElement1 += "_";
+                }
+                final boolean snapshot2 = vElement2.endsWith(snapshot);
+                if (snapshot2) {
+                    vElement2 = vElement2.substring(0, vElement2.length() - snapshot.length() + 1);
+                } else {
+                    vElement2 += "_";
+                }
+                if (vElement1.length() != vElement2.length()) {
+                    final int targetLength = Math.max(vElement1.length(), vElement2.length());
+                    for (int j = vElement1.length(); j < targetLength; j++) {
+                        vElement1 = defaultValue + vElement1;
+                    }
+                    for (int j = vElement2.length(); j < targetLength; j++) {
+                        vElement2 = defaultValue + vElement2;
+                    }
+                }
+                result = vElement1.compareTo(vElement2);
             }
-            return version1.compareTo(version2);
+            return result;
         };
     }
 }

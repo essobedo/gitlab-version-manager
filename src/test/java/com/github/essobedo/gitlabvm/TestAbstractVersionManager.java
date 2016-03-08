@@ -309,11 +309,6 @@ public class TestAbstractVersionManager {
                 }
 
                 @Override
-                public Comparator<String> versionComparator() {
-                    return String::compareTo;
-                }
-
-                @Override
                 public String projectId() {
                     return properties.getProperty("projectId");
                 }
