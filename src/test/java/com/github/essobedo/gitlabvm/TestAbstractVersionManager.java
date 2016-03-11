@@ -28,7 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Comparator;
 import java.util.Properties;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
