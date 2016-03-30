@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Repository.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gitlab Version Manager main Project</a> &gt; <a href="index.source.html" class="el_package">com.github.essobedo.gitlabvm</a> &gt; <span class="el_source">Repository.java</span></div><h1>Repository.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2016 essobedo.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package com.github.essobedo.gitlabvm;
+
+import com.github.essobedo.appma.exception.ApplicationException;
+import com.goebl.david.Response;
+import com.goebl.david.Webb;
+import com.goebl.david.WebbException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Comparator;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+/**
+ * The class allowing to access to gitlab using the Gitlab API.
+ *
+ * @author Nicolas Filotto (nicolas.filotto@gmail.com)
+ * @version $Id$
+ * @since 1.0
+ */
+final class Repository {
+
+    /**
+     * The HTTP code in case of an OK.
+     */
+    private static final int OK_CODE = 200;
+    /**
+     * The min value of the HTTP codes from which we consider the response as a success.
+     */
+    private static final int MIN_SUCCESS_CODE = 400;
+    /**
+     * The encoding used to URL encode the parameters.
+     */
+    private static final String ENCODING = &quot;UTF-8&quot;;
+    /**
+     * The private token.
+     */
+    private String token;
+    /**
+     * The {@link Webb} instance allowing to access to gitlab thanks to the http/https protocol.
+     */
+    private final Webb webb;
+    /**
+     * The configuration to use to access to gitlab.
+     */
+    private final ConnectionConfiguration configuration;
+
+    /**
+     * Constructs a {@code Repository} with the specified end point and configuration.
+     * @param endpoint The end point of the gitlab repository to access.
+     * @param configuration the configuration to use to access to gitlab.
+     * @throws ApplicationException in case the configuration is not valid.
+     */
+    Repository(final String endpoint, final ConnectionConfiguration configuration)
+<span class="fc" id="L76">        throws ApplicationException {</span>
+<span class="pc bpc" id="L77" title="1 of 4 branches missed.">        if (configuration.login() == null || configuration.login().isEmpty()</span>
+<span class="pc bpc" id="L78" title="1 of 4 branches missed.">            || configuration.password() == null || configuration.password().isEmpty()) {</span>
+<span class="fc" id="L79">            throw new ApplicationException(&quot;The login and/or password cannot be empty&quot;);</span>
+        }
+<span class="fc" id="L81">        this.configuration = configuration;</span>
+<span class="fc" id="L82">        this.webb = Webb.create();</span>
+<span class="fc" id="L83">        webb.setBaseUri(endpoint);</span>
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Gives the comparator of version ids to use to be able to identify the latest version.
+     * @return the comparator of version ids.
+     */
+    Comparator&lt;String&gt; versionComparator() {
+<span class="fc" id="L91">        return this.configuration.versionComparator();</span>
+    }
+
+    /**
+     * Checks if the private token has already been retrieved.
+     * @return {@code true} if the private token has already been retrieved, {@code false} otherwise.
+     */
+    private boolean hasToken() {
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        return token != null;</span>
+    }
+
+    /**
+     * Retrieves the private token to use to acces to the gitlab repository.
+     * @return the private token to use to acces to the gitlab repository.
+     * @throws ApplicationException if the private token could not be retrieved.
+     */
+    private String findToken() throws ApplicationException {
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        if (hasToken()) {</span>
+<span class="fc" id="L109">            return token;</span>
+        }
+
+        final Response&lt;JSONObject&gt; response;
+        try {
+<span class="fc" id="L114">            response = webb</span>
+<span class="fc" id="L115">                 .post(String.format(&quot;/api/v3/session?login=%s&amp;password=%s&quot;,</span>
+<span class="fc" id="L116">                     URLEncoder.encode(configuration.login(), Repository.ENCODING),</span>
+<span class="fc" id="L117">                     URLEncoder.encode(configuration.password(), Repository.ENCODING)))</span>
+<span class="fc" id="L118">                 .asJsonObject();</span>
+<span class="nc" id="L119">        } catch (UnsupportedEncodingException | WebbException e) {</span>
+<span class="nc" id="L120">            throw new ApplicationException(&quot;Could not get the private token&quot;, e);</span>
+<span class="fc" id="L121">        }</span>
+
+<span class="fc" id="L123">        final JSONObject body = response.getBody();</span>
+        try {
+<span class="fc bfc" id="L125" title="All 2 branches covered.">            if (response.getStatusCode() &gt;= MIN_SUCCESS_CODE) {</span>
+<span class="fc" id="L126">                throw new ApplicationException(String.format(&quot;Could not connect to the server due to the error: %s&quot;,</span>
+<span class="fc" id="L127">                    response.getResponseMessage()));</span>
+            }
+<span class="fc" id="L129">            this.token = body.getString(&quot;private_token&quot;);</span>
+<span class="fc" id="L130">        } catch (JSONException e) {</span>
+<span class="fc" id="L131">            throw new ApplicationException(&quot;Could not extract the private token&quot;, e);</span>
+<span class="fc" id="L132">        }</span>
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">        if (!hasToken()) {</span>
+<span class="nc" id="L134">            throw new ApplicationException(&quot;No private token could be found&quot;);</span>
+        }
+<span class="fc" id="L136">        return token;</span>
+    }
+
+    /**
+     * Gives the list of versions available in the repository ordered using version ids comparator.
+     * @return the of versions available.
+     * @throws ApplicationException if the list of versions could not be retrieved.
+     */
+    SortedSet&lt;String&gt; getVersions() throws ApplicationException {
+<span class="fc" id="L145">        final String token = findToken();</span>
+        final Response&lt;JSONArray&gt; response;
+        try {
+<span class="fc" id="L148">            response = webb</span>
+<span class="fc" id="L149">                .get(String.format(&quot;/api/v3/projects/%s/repository/tree&quot;, configuration.projectId()))</span>
+<span class="fc" id="L150">                .param(&quot;private_token&quot;, token)</span>
+<span class="fc" id="L151">                .param(&quot;ref_name&quot;, configuration.branch())</span>
+<span class="fc" id="L152">                .asJsonArray();</span>
+<span class="nc" id="L153">        } catch (WebbException e) {</span>
+<span class="nc" id="L154">            throw new ApplicationException(String.format(&quot;Could not access to the versions of the project '%s&quot;,</span>
+<span class="nc" id="L155">                configuration.projectId()), e);</span>
+<span class="fc" id="L156">        }</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">        if (response.getStatusCode() &gt;= MIN_SUCCESS_CODE) {</span>
+<span class="fc" id="L158">            throw new ApplicationException(String.format(</span>
+                &quot;Could not find the versions of the project '%s' in the branch '%s' due to the error: %s&quot;,
+<span class="fc" id="L160">                configuration.projectId(),</span>
+<span class="fc" id="L161">                configuration.branch(),</span>
+<span class="fc" id="L162">                response.getResponseMessage()));</span>
+        }
+<span class="fc" id="L164">        final JSONArray body = response.getBody();</span>
+<span class="fc" id="L165">        final Comparator&lt;String&gt; comparator = configuration.versionComparator();</span>
+<span class="fc" id="L166">        final SortedSet&lt;String&gt; result = new TreeSet&lt;&gt;(comparator);</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        for (int i = 0; i &lt; body.length(); i++) {</span>
+            try {
+<span class="fc" id="L169">                final JSONObject jsonObject = body.getJSONObject(i);</span>
+<span class="fc" id="L170">                result.add(jsonObject.getString(&quot;name&quot;));</span>
+<span class="nc" id="L171">            } catch (JSONException e) {</span>
+<span class="nc" id="L172">                throw new ApplicationException(&quot;Could not extract the versions&quot;, e);</span>
+<span class="fc" id="L173">            }</span>
+        }
+<span class="fc" id="L175">        return result;</span>
+    }
+
+    /**
+     * Gets the content of the patch for the specified version id.
+     * @param version the version id for which we want the content of the patch.
+     * @return the content of the patch.
+     * @throws ApplicationException if the content of the patch could not be found.
+     */
+    InputStream getPatch(final String version) throws ApplicationException {
+<span class="fc" id="L185">        final String token = findToken();</span>
+        final Response&lt;InputStream&gt; response;
+        try {
+<span class="fc" id="L188">            response = webb</span>
+<span class="fc" id="L189">                .get(String.format(&quot;/%s/%s/raw/%s/%s/%s&quot;,</span>
+<span class="fc" id="L190">                    URLEncoder.encode(configuration.projectOwner(), Repository.ENCODING),</span>
+<span class="fc" id="L191">                    URLEncoder.encode(configuration.projectName(), Repository.ENCODING),</span>
+<span class="fc" id="L192">                    URLEncoder.encode(configuration.branch(), Repository.ENCODING),</span>
+<span class="fc" id="L193">                    URLEncoder.encode(version, Repository.ENCODING),</span>
+<span class="fc" id="L194">                    URLEncoder.encode(configuration.patchFileName(), Repository.ENCODING)))</span>
+<span class="fc" id="L195">                .param(&quot;private_token&quot;, token)</span>
+<span class="fc" id="L196">                .followRedirects(false)</span>
+<span class="fc" id="L197">                .asStream();</span>
+<span class="nc" id="L198">        } catch (UnsupportedEncodingException | WebbException e) {</span>
+<span class="nc" id="L199">            throw new ApplicationException(String.format(&quot;Could not access to the file '%s&quot;,</span>
+<span class="nc" id="L200">                configuration.patchFileName()), e);</span>
+<span class="fc" id="L201">        }</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">        if (response.getStatusCode() != OK_CODE) {</span>
+<span class="fc" id="L203">            throw new ApplicationException(String.format(</span>
+                &quot;Could not access to the file '%s due to the error: %s&quot;,
+<span class="fc" id="L205">                configuration.patchFileName(), response.getResponseMessage()));</span>
+        }
+<span class="fc" id="L207">        return response.getBody();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AbstractVersionManager.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gitlab Version Manager main Project</a> &gt; <a href="index.source.html" class="el_package">com.github.essobedo.gitlabvm</a> &gt; <span class="el_source">AbstractVersionManager.java</span></div><h1>AbstractVersionManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2016 essobedo.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package com.github.essobedo.gitlabvm;
+
+import com.github.essobedo.appma.exception.ApplicationException;
+import com.github.essobedo.appma.exception.TaskInterruptedException;
+import com.github.essobedo.appma.spi.Manageable;
+import com.github.essobedo.appma.spi.VersionManager;
+import com.github.essobedo.appma.task.Task;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.SortedSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * &lt;p&gt;Simple implementation of a {@link VersionManager} based on the gitlab API. It assumes that
+ * you have a specific branch in your (private) gitlab project in which you have one directory
+ * per version knowing that the name of the directories is the corresponding version id.
+ * In each directory you have a patch file that is used to upgrade the application.
+ *
+ * &lt;p&gt;This implementation relies on the gitlab API to check if there is a directory in the branch
+ * dedicated to the releases whose name comes after the current version id, if so it means that
+ * there is a new version available and will retrieve the patch file available in the directory.
+ *
+ * @author Nicolas Filotto (nicolas.filotto@gmail.com)
+ * @version $Id$
+ * @since 1.0
+ * @param &lt;T&gt; The type of application that this version manager supports.
+ */
+public abstract class AbstractVersionManager&lt;T extends Manageable&gt; implements VersionManager&lt;T&gt; {
+    /**
+     * The logger of the class.
+     */
+<span class="fc" id="L52">    private static final Logger LOG = Logger.getLogger(AbstractVersionManager.class.getName());</span>
+
+    /**
+     * The default file size in case there is no way to get the size of the file to download.
+     */
+    private static final int DEFAULT_FILE_SIZE = 4096;
+
+    /**
+     * The gitlab repository.
+     */
+    private volatile Repository repository;
+
+    /**
+     * The end point of the gitlab repository.
+     */
+    private final String endpoint;
+
+    /**
+     * Constructs an {@code AbstractVersionManager} with the real end point to gitlab.
+     */
+    public AbstractVersionManager() {
+<span class="nc" id="L73">        this(&quot;https://gitlab.com&quot;);</span>
+<span class="nc" id="L74">    }</span>
+
+    /**
+     * Constructs an {@code AbstractVersionManager} with the specified end point to gitlab.
+     * @param endpoint the end point to gitlab to use.
+     */
+<span class="fc" id="L80">    AbstractVersionManager(final String endpoint) {</span>
+<span class="fc" id="L81">        this.endpoint = endpoint;</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Gives the gitlab repository that has been lazily created.
+     * @param application the application for which we want to access to the corresponding gitlab repository.
+     * @return the current gitlab repository.
+     * @throws ApplicationException if the gitlab repository could not be created.
+     */
+    private Repository getRepository(final T application) throws ApplicationException {
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        if (repository == null) {</span>
+<span class="fc" id="L92">            synchronized (this) {</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">                if (repository == null) {</span>
+<span class="fc" id="L94">                    this.repository = new Repository(endpoint, createConfiguration(application));</span>
+                }
+<span class="fc" id="L96">            }</span>
+        }
+<span class="fc" id="L98">        return repository;</span>
+    }
+
+    /**
+     * Creates the {@link ConnectionConfiguration} that will be used to access to the gitlab repository.
+     * @param application the application for which we want to access to the corresponding gitlab repository.
+     * @return the {@link ConnectionConfiguration} that will be used to access to the gitlab repository.
+     * @throws ApplicationException if the {@link ConnectionConfiguration} could not be created.
+     */
+    protected abstract ConnectionConfiguration createConfiguration(T application) throws ApplicationException;
+
+    @Override
+    public Task&lt;String&gt; check(final T application) throws ApplicationException {
+<span class="fc" id="L111">        return new CheckForUpdate(application);</span>
+    }
+
+    @Override
+    public Task&lt;Void&gt; store(final T application, final OutputStream outputStream) throws ApplicationException {
+<span class="fc" id="L116">        return new StorePatch(application, outputStream);</span>
+    }
+
+    /**
+     * The inner class used to store the patch.
+     */
+    private class StorePatch extends Task&lt;Void&gt; {
+        /**
+         * The application for which we want to store the patch.
+         */
+        private final T application;
+        /**
+         * The stream in which it stores the content of the patch.
+         */
+        private final OutputStream outputStream;
+        /**
+         * Constructs a {@code StorePatch} with the specified application and output stream.
+         *
+         * @param application the application for which we do the task.
+         * @param outputStream the output stream in which it stores the content of the patch.
+         */
+<span class="fc" id="L137">        protected StorePatch(final T application, final OutputStream outputStream) {</span>
+<span class="fc" id="L138">            super(Localization.getMessage(&quot;store&quot;));</span>
+<span class="fc" id="L139">            this.application = application;</span>
+<span class="fc" id="L140">            this.outputStream = outputStream;</span>
+<span class="fc" id="L141">        }</span>
+
+        @Override
+        public boolean cancelable() {
+<span class="nc" id="L145">            return true;</span>
+        }
+
+        @SuppressWarnings(&quot;PMD.PrematureDeclaration&quot;)
+        @Override
+        public Void execute() throws ApplicationException, TaskInterruptedException {
+<span class="fc" id="L151">            final Repository repository = getRepository(application);</span>
+<span class="fc" id="L152">            updateMessage(Localization.getMessage(&quot;finding&quot;));</span>
+<span class="fc" id="L153">            updateProgress(0, 1);</span>
+<span class="fc" id="L154">            final SortedSet&lt;String&gt; versions = repository.getVersions();</span>
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">            if (isCanceled()) {</span>
+<span class="nc" id="L156">                throw new TaskInterruptedException();</span>
+            }
+<span class="fc" id="L158">            updateProgress(1, 1);</span>
+<span class="fc" id="L159">            updateMessage(Localization.getMessage(&quot;downloading&quot;));</span>
+<span class="pc" id="L160">            try (final InputStream inputStream =  repository.getPatch(versions.last())) {</span>
+<span class="fc" id="L161">                final int size = estimatePatchSize(inputStream);</span>
+<span class="fc" id="L162">                final boolean unknownSize = initDownloadingProgress(size);</span>
+<span class="fc" id="L163">                final byte[] buffer = new byte[4096];</span>
+                int length;
+<span class="fc" id="L165">                int downloaded = 0;</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">                while ((length = inputStream.read(buffer)) != -1) {</span>
+<span class="fc" id="L167">                    outputStream.write(buffer, 0, length);</span>
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">                    if (unknownSize) {</span>
+<span class="nc" id="L169">                        downloaded += (DEFAULT_FILE_SIZE - downloaded) / 100;</span>
+<span class="nc" id="L170">                        updateProgress(downloaded, DEFAULT_FILE_SIZE);</span>
+                    } else {
+<span class="fc" id="L172">                        downloaded += length;</span>
+<span class="fc" id="L173">                        updateProgress(downloaded, size);</span>
+                    }
+<span class="fc" id="L175">                    updateMessage(Localization.getMessage(&quot;downloaded&quot;, downloaded / 1024));</span>
+<span class="pc bpc" id="L176" title="1 of 2 branches missed.">                    if (isCanceled()) {</span>
+<span class="nc" id="L177">                        throw new TaskInterruptedException();</span>
+                    }
+                }
+<span class="fc" id="L180">                endDownloadingProgress(size, unknownSize);</span>
+<span class="pc bpc" id="L181" title="6 of 8 branches missed.">            } catch (IOException e) {</span>
+<span class="nc" id="L182">                throw new ApplicationException(&quot;Could not download the last version&quot;, e);</span>
+<span class="fc" id="L183">            }</span>
+<span class="fc" id="L184">            return null;</span>
+        }
+        /**
+         * Notifies that we have reached the end of the stream.
+         * @param size the evaluated size of the patch.
+         * @param unknownSize indicates whether the size of the patch could be evaluated.
+         */
+        private void endDownloadingProgress(final int size, final boolean unknownSize) {
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">            if (unknownSize) {</span>
+<span class="nc" id="L193">                updateProgress(DEFAULT_FILE_SIZE, DEFAULT_FILE_SIZE);</span>
+            } else {
+<span class="fc" id="L195">                updateProgress(size, size);</span>
+            }
+<span class="fc" id="L197">        }</span>
+        /**
+         * Initializes the progress of the task according to the specified size.
+         * @param size the estimated size of the patch.
+         * @return {@code true} if the provided estimated {@code size} is {@code -1}, {@code false}
+         * otherwise.
+         */
+        private boolean initDownloadingProgress(final int size) {
+            final boolean unknownSize;
+<span class="pc bpc" id="L206" title="1 of 2 branches missed.">            if (size &gt; 0) {</span>
+<span class="fc" id="L207">                unknownSize = false;</span>
+<span class="fc" id="L208">                updateProgress(0, size);</span>
+            } else {
+<span class="nc" id="L210">                unknownSize = true;</span>
+<span class="nc" id="L211">                updateProgress(0, DEFAULT_FILE_SIZE);</span>
+            }
+<span class="fc" id="L213">            return unknownSize;</span>
+        }
+        /**
+         * Estimates the size of the patch.
+         * @param inputStream the content of the patch in stream.
+         * @return The estimated size of the patch.
+         */
+        private int estimatePatchSize(final InputStream inputStream) {
+<span class="fc" id="L221">            int size = 0;</span>
+            try {
+<span class="fc" id="L223">                size = inputStream.available();</span>
+<span class="nc" id="L224">            } catch (IOException e) {</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">                if (LOG.isLoggable(Level.WARNING)) {</span>
+<span class="nc" id="L226">                    LOG.log(Level.WARNING, &quot;Could not get the total amount of size to download&quot;);</span>
+                }
+<span class="fc" id="L228">            }</span>
+<span class="fc" id="L229">            return size;</span>
+        }
+    }
+
+    /**
+     * The inner class allowing to check if a new version of the application exists.
+     */
+    private class CheckForUpdate extends Task&lt;String&gt; {
+        /**
+         * The application for which we want to check for an update.
+         */
+        private final T application;
+
+        /**
+         * Constructs a {@code CheckForUpdate} with the specified application.
+         *
+         * @param application the application for which we do the task.
+         */
+<span class="fc" id="L247">        protected CheckForUpdate(final T application) {</span>
+<span class="fc" id="L248">            super(Localization.getMessage(&quot;check&quot;));</span>
+<span class="fc" id="L249">            this.application = application;</span>
+<span class="fc" id="L250">        }</span>
+
+        @Override
+        public boolean cancelable() {
+<span class="nc" id="L254">            return true;</span>
+        }
+
+        @SuppressWarnings(&quot;PMD.PrematureDeclaration&quot;)
+        @Override
+        public String execute() throws ApplicationException, TaskInterruptedException {
+<span class="fc" id="L260">            final Repository repository = getRepository(application);</span>
+<span class="fc" id="L261">            updateMessage(Localization.getMessage(&quot;checking&quot;));</span>
+<span class="fc" id="L262">            final SortedSet&lt;String&gt; versions = repository.getVersions();</span>
+<span class="pc bpc" id="L263" title="1 of 2 branches missed.">            if (isCanceled()) {</span>
+<span class="nc" id="L264">                throw new TaskInterruptedException();</span>
+            }
+<span class="fc" id="L266">            final String last = versions.last();</span>
+<span class="fc bfc" id="L267" title="All 2 branches covered.">            if (repository.versionComparator().compare(application.version(), last) &lt; 0) {</span>
+<span class="fc" id="L268">                return last;</span>
+            }
+<span class="fc" id="L270">            return null;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

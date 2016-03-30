@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ConnectionConfiguration.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Gitlab Version Manager main Project</a> &gt; <a href="index.source.html" class="el_package">com.github.essobedo.gitlabvm</a> &gt; <span class="el_source">ConnectionConfiguration.java</span></div><h1>ConnectionConfiguration.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2016 essobedo.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package com.github.essobedo.gitlabvm;
+
+import java.util.Comparator;
+
+/**
+ * The configuration needed to access to a gitlab repository.
+ *
+ * @author Nicolas Filotto (nicolas.filotto@gmail.com)
+ * @version $Id$
+ * @since 1.0
+ */
+public interface ConnectionConfiguration {
+    /**
+     * Gives the login of gitlab to use to access to the repository.
+     * @return the login.
+     */
+    String login();
+    /**
+     * Gives the password of gitlab to use to access to the repository.
+     * @return the password.
+     */
+    String password();
+    /**
+     * Gives the owner of the gitlab project to which we want to access.
+     * @return the owner of the gitlab project.
+     */
+    String projectOwner();
+    /**
+     * Gives the id of the gitlab project to which we want to access.
+     * @return the id of the gitlab project.
+     */
+    String projectId();
+    /**
+     * Gives the name of the gitlab project to which we want to access.
+     * @return the name of the gitlab project.
+     */
+    String projectName();
+    /**
+     * Gives the name of the branch in which the releases are stored.
+     * @return the name of the branch.
+     */
+    String branch();
+    /**
+     * Gives the name of the file that will be considered as the patch.
+     * @return the name of the patch.
+     */
+    String patchFileName();
+    /**
+     * Gives the comparator of version ids to use to be able to identify the latest version.
+     * @return the comparator of version ids.
+     */
+    @SuppressWarnings(&quot;PMD.NPathComplexity&quot;)
+    default Comparator&lt;String&gt; versionComparator() {
+<span class="fc" id="L72">        return (version1, version2) -&gt; {</span>
+<span class="fc" id="L73">            final String[] versions1 = version1.split(&quot;\\.&quot;);</span>
+<span class="fc" id="L74">            final String[] versions2 = version2.split(&quot;\\.&quot;);</span>
+<span class="fc" id="L75">            final String defaultValue = &quot;*&quot;;</span>
+<span class="fc" id="L76">            final String snapshot = &quot;-SNAPSHOT&quot;;</span>
+<span class="fc" id="L77">            int result = 0;</span>
+<span class="fc bfc" id="L78" title="All 4 branches covered.">            for (int i = 0, length = Math.max(versions1.length, versions2.length); result == 0 &amp;&amp; i &lt; length; i++) {</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">                String vElement1 = i &lt; versions1.length ? versions1[i] : defaultValue;</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">                String vElement2 = i &lt; versions2.length ? versions2[i] : defaultValue;</span>
+<span class="fc" id="L81">                final boolean snapshot1 = vElement1.endsWith(snapshot);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">                if (snapshot1) {</span>
+<span class="fc" id="L83">                    vElement1 = vElement1.substring(0, vElement1.length() - snapshot.length() + 1);</span>
+                } else {
+<span class="fc" id="L85">                    vElement1 += &quot;_&quot;;</span>
+                }
+<span class="fc" id="L87">                final boolean snapshot2 = vElement2.endsWith(snapshot);</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">                if (snapshot2) {</span>
+<span class="fc" id="L89">                    vElement2 = vElement2.substring(0, vElement2.length() - snapshot.length() + 1);</span>
+                } else {
+<span class="fc" id="L91">                    vElement2 += &quot;_&quot;;</span>
+                }
+<span class="fc bfc" id="L93" title="All 2 branches covered.">                if (vElement1.length() != vElement2.length()) {</span>
+<span class="fc" id="L94">                    final int targetLength = Math.max(vElement1.length(), vElement2.length());</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">                    for (int j = vElement1.length(); j &lt; targetLength; j++) {</span>
+<span class="fc" id="L96">                        vElement1 = defaultValue + vElement1;</span>
+                    }
+<span class="fc bfc" id="L98" title="All 2 branches covered.">                    for (int j = vElement2.length(); j &lt; targetLength; j++) {</span>
+<span class="fc" id="L99">                        vElement2 = defaultValue + vElement2;</span>
+                    }
+                }
+<span class="fc" id="L102">                result = vElement1.compareTo(vElement2);</span>
+            }
+<span class="fc" id="L104">            return result;</span>
+        };
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
