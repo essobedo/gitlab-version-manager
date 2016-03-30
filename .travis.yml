@@ -1,0 +1,15 @@
+language: java
+cache:
+  directories:
+  - $HOME/.jdk
+install:
+  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -Pfast
+script:
+  - mvn clean install -Pcheck
+  - mvn clean
+env:
+  global:
+    - MAVEN_OPTS="-Xmx256m"
+    - JAVA_OPTS="-Xmx256m"
+jdk:
+  - oraclejdk8
